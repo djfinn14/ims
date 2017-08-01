@@ -222,3 +222,33 @@ class TestRemoveImage(TestCase):
         self.db.project.delete_with_name(PROJECT)
         self.db.close()
         self.good_bmi.shutdown()
+
+
+class TestRunScript(TestCase):
+    """
+    Imports an image and calls run script
+    """
+    @trace
+    def setUp(self):
+        self.db = Database()
+        self.db.project.insert(PROJECT, NETWORK)
+        self.good_bmi = BMI(CORRECT_HIL_USERNAME, CORRECT_HIL_PASSWORD,
+                            PROJECT)
+        self.good_bmi.import_ceph_image(EXIST_IMG_NAME)
+        script = """#!/bin/bash\nrbdev=$1\n$node_name=cisco-05\nmkdir"""\
+                 """/tmp/$node_name\nmount ${rbdev}p1 /tmp/$node_name\n"""\
+                 """kernel=`grep -m1 -P"^\t\tlinux" /tmp/$node_name/EFI/"""\
+                 """centos/grub.cfg  | awk '{print $2}'`\nramdisk=`grep -m1"""\
+                 """ -P "^\t\tinitrd" /tmp/$node_name/EFI/centos/grub.cfg"""\
+                 """| awk '{print $2}'`\necho $kernel\necho $ramdisk\n"""\
+                 """umount /tmp/$node_name\nrm -rf /tmp/$node_name"""
+        encode_script = base64.b64encode(script)
+
+    def runTest(self):
+        response = self.good_bmi.run_script(EXIST_IMG_NAME, encode_script)
+        self.assertEqual(response[constants.STATUS_CODE_KEY], 200)
+
+    def tearDown(self):
+        self.db.project.delete_with_name(PROJECT)
+        self.db.close()
+        self.good_bmi.shutdown()
