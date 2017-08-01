@@ -2,6 +2,7 @@
 
 import time
 import unittest
+import base64
 from unittest import TestCase
 
 import requests
